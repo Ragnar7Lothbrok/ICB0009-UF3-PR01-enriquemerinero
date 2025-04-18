@@ -1,0 +1,39 @@
+# Ignore build output
+bin/
+obj/
+
+# Ignore user-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VSCode settings (optional)
+.vscode/
+
+# NuGet packages
+*.nupkg
+packages/
+
+# Auto-generated files
+Generated_Code/
+
+# Logs
+*.log
+
+# DotCover
+.idea/
+*.dotCover
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Rider/JetBrains
+.idea/
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+*.swp

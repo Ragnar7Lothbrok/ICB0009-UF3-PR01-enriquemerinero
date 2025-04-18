@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "Servidor"
+		},
+		{
+			"path": "Cliente"
+		},
+		{
+			"path": "NetworkStreamClass"
+		},
+		{
+			"path": "Vehiculo"
+		},
+		{
+			"path": "Carretera"
+		}
+	],
+	"settings": {}
+}

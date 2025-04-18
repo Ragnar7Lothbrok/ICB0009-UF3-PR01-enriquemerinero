@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include = "../Vehiculo/Vehiculo.csproj" />
+  </ItemGroup> 
+
+    <ItemGroup>
+    <ProjectReference Include = "../Carretera/Carretera.csproj" />
+  </ItemGroup> 
+</Project>
