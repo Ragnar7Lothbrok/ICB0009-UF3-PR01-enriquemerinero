@@ -25,6 +25,16 @@ namespace Client
                 NetworkStream stream = cliente.GetStream();
                 Console.WriteLine("📡 Stream de red obtenido en el cliente.");
 
+                // === HANDSHAKE ===
+                NetworkStreamClass.EscribirMensajeNetworkStream(stream, "INICIO");
+                Console.WriteLine("📤 Mensaje 'INICIO' enviado al servidor.");
+
+                string idRecibido = NetworkStreamClass.LeerMensajeNetworkStream(stream);
+                Console.WriteLine($"📨 ID recibido del servidor: {idRecibido}");
+
+                NetworkStreamClass.EscribirMensajeNetworkStream(stream, idRecibido);
+                Console.WriteLine("📤 Confirmación enviada al servidor.");
+
                 cliente.Close();
                 Console.WriteLine("🔌 Conexión cerrada.");
             }

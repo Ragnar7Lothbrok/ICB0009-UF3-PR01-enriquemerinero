@@ -34,18 +34,44 @@ namespace Servidor
                     int idAsignado;
                     string direccionAsignada;
 
+                    // Asignar ID único con bloqueo
                     lock (lockId)
                     {
                         idAsignado = siguienteId;
                         siguienteId++;
                     }
 
+                    // Asignar dirección aleatoria
                     direccionAsignada = (rng.Next(2) == 0) ? "Norte" : "Sur";
 
                     Console.WriteLine($"🛠️ Gestionando nuevo vehículo... ID: {idAsignado}, Dirección: {direccionAsignada}");
 
                     NetworkStream stream = cliente.GetStream();
                     Console.WriteLine($"📡 Stream de red obtenido para vehículo ID {idAsignado}");
+
+                    // === HANDSHAKE ===
+                    string mensajeInicio = NetworkStreamClass.LeerMensajeNetworkStream(stream);
+                    Console.WriteLine($"📨 Mensaje recibido del cliente: {mensajeInicio}");
+
+                    if (mensajeInicio == "INICIO")
+                    {
+                        // Enviar ID al cliente
+                        NetworkStreamClass.EscribirMensajeNetworkStream(stream, idAsignado.ToString());
+                        Console.WriteLine($"📤 ID enviado al cliente: {idAsignado}");
+
+                        // Esperar confirmación del cliente
+                        string confirmacion = NetworkStreamClass.LeerMensajeNetworkStream(stream);
+                        Console.WriteLine($"✅ Confirmación de ID recibida: {confirmacion}");
+
+                        if (confirmacion == idAsignado.ToString())
+                        {
+                            Console.WriteLine($"🔓 Handshake completado correctamente para cliente #{idAsignado}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"❌ ID incorrecto. Se esperaba: {idAsignado}");
+                        }
+                    }
 
                     cliente.Close();
                 });
