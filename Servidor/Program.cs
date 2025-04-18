@@ -4,6 +4,7 @@ using System.Net;
 using System.IO;
 using System.Text;
 using System.Threading;
+using System.Collections.Generic;
 using NetworkStreamNS;
 using CarreteraClass;
 using VehiculoClass;
@@ -14,7 +15,11 @@ namespace Servidor
     {
         static int siguienteId = 1;
         static object lockId = new object();
+        static object lockLista = new object();
         static Random rng = new Random();
+
+        // Lista para almacenar todos los clientes conectados
+        static List<Cliente> listaClientes = new List<Cliente>();
 
         static void Main(string[] args)
         {
@@ -34,7 +39,7 @@ namespace Servidor
                     int idAsignado;
                     string direccionAsignada;
 
-                    // Asignar ID único con bloqueo
+                    // Asignar ID único con protección
                     lock (lockId)
                     {
                         idAsignado = siguienteId;
@@ -59,13 +64,20 @@ namespace Servidor
                         NetworkStreamClass.EscribirMensajeNetworkStream(stream, idAsignado.ToString());
                         Console.WriteLine($"📤 ID enviado al cliente: {idAsignado}");
 
-                        // Esperar confirmación del cliente
+                        // Esperar confirmación
                         string confirmacion = NetworkStreamClass.LeerMensajeNetworkStream(stream);
                         Console.WriteLine($"✅ Confirmación de ID recibida: {confirmacion}");
 
                         if (confirmacion == idAsignado.ToString())
                         {
                             Console.WriteLine($"🔓 Handshake completado correctamente para cliente #{idAsignado}");
+
+                            // === ETAPA 7: Guardar cliente en lista compartida ===
+                            lock (lockLista)
+                            {
+                                listaClientes.Add(new Cliente(idAsignado, stream));
+                                Console.WriteLine($"📦 Cliente añadido a la lista. Total conectados: {listaClientes.Count}");
+                            }
                         }
                         else
                         {
@@ -73,7 +85,7 @@ namespace Servidor
                         }
                     }
 
-                    cliente.Close();
+                    // Nota: NO cerramos el cliente aquí, porque su stream se está guardando y puede seguir usándose
                 });
 
                 hiloCliente.Start();
