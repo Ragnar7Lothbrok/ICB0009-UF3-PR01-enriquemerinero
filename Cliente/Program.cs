@@ -54,6 +54,21 @@ namespace Client
                 NetworkStreamClass.EscribirDatosVehiculoNS(stream, nuevoVehiculo);
                 Console.WriteLine($"📤 Vehículo enviado al servidor → ID: {nuevoVehiculo.Id}, Velocidad: {nuevoVehiculo.Velocidad}ms");
 
+                // === EJERCICIO 2: ETAPA 3 ===
+                // Simular movimiento del vehículo
+                for (int i = 1; i <= 100; i++)
+                {
+                    Thread.Sleep(nuevoVehiculo.Velocidad);
+                    nuevoVehiculo.Pos = i;
+
+                    if (i == 100)
+                    nuevoVehiculo.Acabado = true;
+
+                    // Enviar vehículo actualizado al servidor
+                    NetworkStreamClass.EscribirDatosVehiculoNS(stream, nuevoVehiculo);
+                    Console.WriteLine($"🏁 Enviado → ID: {nuevoVehiculo.Id}, Posición: {nuevoVehiculo.Pos}, Velocidad: {nuevoVehiculo.Velocidad}ms");
+                }
+
                 cliente.Close();
                 Console.WriteLine("🔌 Conexión cerrada.");
             }

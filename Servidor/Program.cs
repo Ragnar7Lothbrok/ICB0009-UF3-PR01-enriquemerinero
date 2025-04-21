@@ -73,9 +73,9 @@ namespace Servidor
                                 Console.WriteLine($"📦 Cliente añadido a la lista. Total conectados: {listaClientes.Count}");
                             }
 
-                            // === EJERCICIO 2: ETAPA 2 ===
+                            // === EJERCICIO 2: ETAPA 2 y 3 ===
                             Vehiculo vehiculoRecibido = NetworkStreamClass.LeerDatosVehiculoNS(stream);
-                            vehiculoRecibido.Direccion = direccionAsignada; // asignamos la dirección desde el servidor
+                            vehiculoRecibido.Direccion = direccionAsignada;
 
                             lock (lockVehiculos)
                             {
@@ -83,6 +83,19 @@ namespace Servidor
                                 Console.WriteLine($"🚗 Vehículo añadido a la carretera → ID: {vehiculoRecibido.Id}, Dirección: {vehiculoRecibido.Direccion}, Posición: {vehiculoRecibido.Pos}");
                                 carretera.MostrarBicicletas();
                             }
+
+                            // === ETAPA 3: Escuchar actualizaciones del vehículo
+                            while (!vehiculoRecibido.Acabado)
+                            {
+                                vehiculoRecibido = NetworkStreamClass.LeerDatosVehiculoNS(stream);
+
+                                lock (lockVehiculos)
+                                {
+                                    carretera.ActualizarVehiculo(vehiculoRecibido);
+                                    carretera.MostrarBicicletas();
+                                }
+                            }
+                            Console.WriteLine($"🏁 Vehículo #{vehiculoRecibido.Id} ha terminado su recorrido.");
                         }
                         else
                         {

@@ -42,13 +42,12 @@ public class Carretera
     //Muestra por pantalla los vehiculos en carretera. 
     public void MostrarBicicletas ()
     {
-        string strVehs = "";
+        Console.WriteLine("📍 Estado actual de la carretera:");
         foreach (Vehiculo v in VehiculosEnCarretera)
         {
-            strVehs = strVehs + "\t" + v.Pos;
+            Console.WriteLine($"➡️ Vehículo #{v.Id} ({v.Direccion}) → Posición: {v.Pos}");
         }
-
-        Console.WriteLine(strVehs);
+        Console.WriteLine();
     }
 
     //Permite serializar Carretera a array de bytes mediant formato XML
