@@ -35,6 +35,25 @@ namespace Client
                 NetworkStreamClass.EscribirMensajeNetworkStream(stream, idRecibido);
                 Console.WriteLine("📤 Confirmación enviada al servidor.");
 
+                // === EJERCICIO 2: ETAPA 2 ===
+                // Crear objeto Vehiculo
+                int id = int.Parse(idRecibido);
+                Random rnd = new Random();
+
+                Vehiculo nuevoVehiculo = new Vehiculo
+                {
+                    Id = id,
+                    Pos = 0,
+                    Velocidad = rnd.Next(100, 501),
+                    Acabado = false,
+                    Direccion = "", // el servidor de momento la conoce
+                    Parado = false
+                };
+
+                // Enviar objeto Vehiculo al servidor
+                NetworkStreamClass.EscribirDatosVehiculoNS(stream, nuevoVehiculo);
+                Console.WriteLine($"📤 Vehículo enviado al servidor → ID: {nuevoVehiculo.Id}, Velocidad: {nuevoVehiculo.Velocidad}ms");
+
                 cliente.Close();
                 Console.WriteLine("🔌 Conexión cerrada.");
             }

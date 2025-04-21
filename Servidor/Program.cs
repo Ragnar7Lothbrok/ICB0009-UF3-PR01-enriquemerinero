@@ -16,10 +16,11 @@ namespace Servidor
         static int siguienteId = 1;
         static object lockId = new object();
         static object lockLista = new object();
+        static object lockVehiculos = new object();
         static Random rng = new Random();
 
-        // Lista para almacenar todos los clientes conectados
         static List<Cliente> listaClientes = new List<Cliente>();
+        static Carretera carretera = new Carretera();
 
         static void Main(string[] args)
         {
@@ -39,32 +40,26 @@ namespace Servidor
                     int idAsignado;
                     string direccionAsignada;
 
-                    // Asignar ID único con protección
                     lock (lockId)
                     {
                         idAsignado = siguienteId;
                         siguienteId++;
                     }
 
-                    // Asignar dirección aleatoria
                     direccionAsignada = (rng.Next(2) == 0) ? "Norte" : "Sur";
-
                     Console.WriteLine($"🛠️ Gestionando nuevo vehículo... ID: {idAsignado}, Dirección: {direccionAsignada}");
 
                     NetworkStream stream = cliente.GetStream();
                     Console.WriteLine($"📡 Stream de red obtenido para vehículo ID {idAsignado}");
 
-                    // === HANDSHAKE ===
                     string mensajeInicio = NetworkStreamClass.LeerMensajeNetworkStream(stream);
                     Console.WriteLine($"📨 Mensaje recibido del cliente: {mensajeInicio}");
 
                     if (mensajeInicio == "INICIO")
                     {
-                        // Enviar ID al cliente
                         NetworkStreamClass.EscribirMensajeNetworkStream(stream, idAsignado.ToString());
                         Console.WriteLine($"📤 ID enviado al cliente: {idAsignado}");
 
-                        // Esperar confirmación
                         string confirmacion = NetworkStreamClass.LeerMensajeNetworkStream(stream);
                         Console.WriteLine($"✅ Confirmación de ID recibida: {confirmacion}");
 
@@ -72,11 +67,21 @@ namespace Servidor
                         {
                             Console.WriteLine($"🔓 Handshake completado correctamente para cliente #{idAsignado}");
 
-                            // === ETAPA 7: Guardar cliente en lista compartida ===
                             lock (lockLista)
                             {
                                 listaClientes.Add(new Cliente(idAsignado, stream));
                                 Console.WriteLine($"📦 Cliente añadido a la lista. Total conectados: {listaClientes.Count}");
+                            }
+
+                            // === EJERCICIO 2: ETAPA 2 ===
+                            Vehiculo vehiculoRecibido = NetworkStreamClass.LeerDatosVehiculoNS(stream);
+                            vehiculoRecibido.Direccion = direccionAsignada; // asignamos la dirección desde el servidor
+
+                            lock (lockVehiculos)
+                            {
+                                carretera.AñadirVehiculo(vehiculoRecibido);
+                                Console.WriteLine($"🚗 Vehículo añadido a la carretera → ID: {vehiculoRecibido.Id}, Dirección: {vehiculoRecibido.Direccion}, Posición: {vehiculoRecibido.Pos}");
+                                carretera.MostrarBicicletas();
                             }
                         }
                         else
@@ -84,8 +89,6 @@ namespace Servidor
                             Console.WriteLine($"❌ ID incorrecto. Se esperaba: {idAsignado}");
                         }
                     }
-
-                    // Nota: NO cerramos el cliente aquí, porque su stream se está guardando y puede seguir usándose
                 });
 
                 hiloCliente.Start();

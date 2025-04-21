@@ -8,7 +8,7 @@ public class Vehiculo
     public int Id {get; set;}
     public int Pos {get;set;}
     public int Velocidad {get; set;}
-    public string Direccion {get; set;} // "Norte" o "Sur" 
+    public string Direccion {get; set;} = string.Empty; 
     public bool Acabado {get;set;}
     public bool Parado {get; set;}
     
@@ -16,9 +16,10 @@ public class Vehiculo
     {
         var randVelocidad = new Random();
 
-        this.Velocidad = randVelocidad.Next(100,500);
+        this.Velocidad = randVelocidad.Next(100, 500);
         this.Pos = 0;
         this.Acabado = false;
+        this.Parado = false;
     }
 
     //Permite serializar Vehiculo a array de bytes mediant formato XML
