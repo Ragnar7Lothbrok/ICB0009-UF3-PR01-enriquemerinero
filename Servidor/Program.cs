@@ -93,6 +93,7 @@ namespace Servidor
                                 {
                                     carretera.ActualizarVehiculo(vehiculoRecibido);
                                     carretera.MostrarBicicletas();
+                                    EnviarCarreteraATodosLosClientes();
                                 }
                             }
                             Console.WriteLine($"🏁 Vehículo #{vehiculoRecibido.Id} ha terminado su recorrido.");
@@ -105,6 +106,24 @@ namespace Servidor
                 });
 
                 hiloCliente.Start();
+            }
+        }
+
+        static void EnviarCarreteraATodosLosClientes()
+        {
+            lock (lockLista)
+            {
+                foreach (Cliente c in listaClientes)
+                {
+                    try
+                    {
+                        NetworkStreamClass.EscribirDatosCarreteraNS(c.Stream, carretera);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"⚠️ Error al enviar carretera al cliente #{c.Id}: {ex.Message}");
+                    }
+                }
             }
         }
     }
