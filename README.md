@@ -128,3 +128,11 @@ En esta segunda fase se implementa la simulación del movimiento de los vehícul
 ![Cliente](./capturas/cliente_ej2_5.png)
 
 ---
+
+### ⚙️ Simulación de avance según dirección
+
+- Cada vehículo recibe del servidor una dirección (`"Norte"` o `"Sur"`).
+- En función de esta dirección:
+  - Si es **"Norte"**, el vehículo avanza de **0 a 100 km**.
+  - Si es **"Sur"**, el vehículo avanza de **100 a 0 km**.
+- Esta lógica está implementada en el cliente, que ajusta su bucle de avance en base al valor del atributo `Direccion`.

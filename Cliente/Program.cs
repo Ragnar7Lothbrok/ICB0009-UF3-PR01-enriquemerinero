@@ -4,9 +4,9 @@ using System.Net;
 using System.Text;
 using System.IO;
 using System.Threading;
-using NetworkStreamNS;
-using CarreteraClass;
 using VehiculoClass;
+using CarreteraClass;
+using NetworkStreamNS;
 
 namespace Client
 {
@@ -43,12 +43,16 @@ namespace Client
                     Pos = 0,
                     Velocidad = rnd.Next(100, 501),
                     Acabado = false,
-                    Direccion = "", // el servidor la asignará
+                    Direccion = "", // Se recibirá del servidor
                     Parado = false
                 };
 
                 NetworkStreamClass.EscribirDatosVehiculoNS(stream, nuevoVehiculo);
-                Console.WriteLine($"📤 Vehículo enviado al servidor → ID: {nuevoVehiculo.Id}, Velocidad: {nuevoVehiculo.Velocidad}ms");
+                Console.WriteLine($"🚗 Vehículo enviado al servidor → ID: {nuevoVehiculo.Id}, Velocidad: {nuevoVehiculo.Velocidad}ms");
+
+                // === Recibir el vehículo con dirección ===
+                nuevoVehiculo = NetworkStreamClass.LeerDatosVehiculoNS(stream);
+                Console.WriteLine($"📩 Dirección asignada: {nuevoVehiculo.Direccion}");
 
                 // === Hilo de escucha de carretera ===
                 Thread hiloEscucha = new Thread(() =>
@@ -81,20 +85,33 @@ namespace Client
 
                 hiloEscucha.Start();
 
-                // === Movimiento del vehículo ===
-                for (int i = 1; i <= 100; i++)
+                // === Movimiento del vehículo según dirección ===
+                if (nuevoVehiculo.Direccion == "Norte")
                 {
-                    Thread.Sleep(nuevoVehiculo.Velocidad);
-                    nuevoVehiculo.Pos = i;
+                    for (int i = 1; i <= 100; i++)
+                    {
+                        Thread.Sleep(nuevoVehiculo.Velocidad);
+                        nuevoVehiculo.Pos = i;
+                        if (i == 100) nuevoVehiculo.Acabado = true;
 
-                    if (i == 100)
-                        nuevoVehiculo.Acabado = true;
+                        Console.WriteLine($"🏁 Enviado → ID: {nuevoVehiculo.Id}, Posición: {nuevoVehiculo.Pos}, Velocidad: {nuevoVehiculo.Velocidad}ms");
+                        NetworkStreamClass.EscribirDatosVehiculoNS(stream, nuevoVehiculo);
+                    }
+                }
+                else // Sur
+                {
+                    for (int i = 100; i >= 0; i--)
+                    {
+                        Thread.Sleep(nuevoVehiculo.Velocidad);
+                        nuevoVehiculo.Pos = i;
+                        if (i == 0) nuevoVehiculo.Acabado = true;
 
-                    NetworkStreamClass.EscribirDatosVehiculoNS(stream, nuevoVehiculo);
-                    Console.WriteLine($"🏁 Enviado → ID: {nuevoVehiculo.Id}, Posición: {nuevoVehiculo.Pos}, Velocidad: {nuevoVehiculo.Velocidad}ms");
+                        Console.WriteLine($"🏁 Enviado → ID: {nuevoVehiculo.Id}, Posición: {nuevoVehiculo.Pos}, Velocidad: {nuevoVehiculo.Velocidad}ms");
+                        NetworkStreamClass.EscribirDatosVehiculoNS(stream, nuevoVehiculo);
+                    }
                 }
 
-                // === Aviso al servidor y cierre limpio ===
+                // === Avisar fin y cerrar conexión ===
                 NetworkStreamClass.EscribirMensajeNetworkStream(stream, "FIN");
                 hiloEscucha.Interrupt();
                 cliente.Close();

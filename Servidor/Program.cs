@@ -76,6 +76,7 @@ namespace Servidor
                                 // === Recibir vehículo inicial ===
                                 Vehiculo vehiculoRecibido = NetworkStreamClass.LeerDatosVehiculoNS(stream);
                                 vehiculoRecibido.Direccion = direccionAsignada;
+                                NetworkStreamClass.EscribirDatosVehiculoNS(stream, vehiculoRecibido);
 
                                 lock (lockVehiculos)
                                 {
