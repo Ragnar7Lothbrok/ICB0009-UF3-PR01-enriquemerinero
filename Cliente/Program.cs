@@ -19,7 +19,6 @@ namespace Client
                 Console.WriteLine("🚗 Cliente iniciando conexión...");
 
                 TcpClient cliente = new TcpClient("127.0.0.1", 5000);
-
                 Console.WriteLine("✅ Conectado al servidor.");
 
                 NetworkStream stream = cliente.GetStream();
@@ -35,40 +34,69 @@ namespace Client
                 NetworkStreamClass.EscribirMensajeNetworkStream(stream, idRecibido);
                 Console.WriteLine("📤 Confirmación enviada al servidor.");
 
-                // === EJERCICIO 2: ETAPA 2 ===
-                // Crear objeto Vehiculo
+                // === Crear vehículo ===
                 int id = int.Parse(idRecibido);
                 Random rnd = new Random();
-
                 Vehiculo nuevoVehiculo = new Vehiculo
                 {
                     Id = id,
                     Pos = 0,
                     Velocidad = rnd.Next(100, 501),
                     Acabado = false,
-                    Direccion = "", // el servidor de momento la conoce
+                    Direccion = "", // el servidor la asignará
                     Parado = false
                 };
 
-                // Enviar objeto Vehiculo al servidor
                 NetworkStreamClass.EscribirDatosVehiculoNS(stream, nuevoVehiculo);
                 Console.WriteLine($"📤 Vehículo enviado al servidor → ID: {nuevoVehiculo.Id}, Velocidad: {nuevoVehiculo.Velocidad}ms");
 
-                // === EJERCICIO 2: ETAPA 3 ===
-                // Simular movimiento del vehículo
+                // === Hilo de escucha de carretera ===
+                Thread hiloEscucha = new Thread(() =>
+                {
+                    try
+                    {
+                        while (true)
+                        {
+                            Carretera carreteraRecibida = NetworkStreamClass.LeerDatosCarreteraNS(stream);
+                            Console.WriteLine("📡 Estado actual de la carretera recibido del servidor:");
+
+                            foreach (Vehiculo v in carreteraRecibida.VehiculosEnCarretera)
+                            {
+                                string estado = v.Acabado ? "✅ Acabado" : $"📍 Pos: {v.Pos}";
+                                Console.WriteLine($"🚗 Vehículo #{v.Id} ({v.Direccion}) → {estado}");
+                            }
+
+                            Console.WriteLine();
+                        }
+                    }
+                    catch (ThreadInterruptedException)
+                    {
+                        Console.WriteLine("ℹ️ Hilo de recepción interrumpido correctamente.");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"⚠️ Error al recibir datos del servidor: {ex.Message}");
+                    }
+                });
+
+                hiloEscucha.Start();
+
+                // === Movimiento del vehículo ===
                 for (int i = 1; i <= 100; i++)
                 {
                     Thread.Sleep(nuevoVehiculo.Velocidad);
                     nuevoVehiculo.Pos = i;
 
                     if (i == 100)
-                    nuevoVehiculo.Acabado = true;
+                        nuevoVehiculo.Acabado = true;
 
-                    // Enviar vehículo actualizado al servidor
                     NetworkStreamClass.EscribirDatosVehiculoNS(stream, nuevoVehiculo);
                     Console.WriteLine($"🏁 Enviado → ID: {nuevoVehiculo.Id}, Posición: {nuevoVehiculo.Pos}, Velocidad: {nuevoVehiculo.Velocidad}ms");
                 }
 
+                // === Aviso al servidor y cierre limpio ===
+                NetworkStreamClass.EscribirMensajeNetworkStream(stream, "FIN");
+                hiloEscucha.Interrupt();
                 cliente.Close();
                 Console.WriteLine("🔌 Conexión cerrada.");
             }
