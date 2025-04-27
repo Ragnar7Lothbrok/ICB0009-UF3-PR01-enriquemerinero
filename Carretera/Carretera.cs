@@ -29,13 +29,21 @@ public class Carretera
     }
 
     //Actualiza los datos de un vehiculo ya existente en la lista de vehiculos en carretera. 
-    public void ActualizarVehiculo (Vehiculo V)
+    public void ActualizarVehiculo(Vehiculo V)
     {
         Vehiculo veh = VehiculosEnCarretera.FirstOrDefault(x => x.Id == V.Id);
         if (veh != null) 
         {
             veh.Pos = V.Pos;
             veh.Velocidad = V.Velocidad;
+            veh.Direccion = V.Direccion;   // ✅ Añadido
+            veh.Acabado = V.Acabado;        // ✅ Añadido
+            veh.Parado = V.Parado;          // ✅ Añadido
+        }
+        else
+        {
+            VehiculosEnCarretera.Add(V);
+            NumVehiculosEnCarrera++;
         }
     }
 

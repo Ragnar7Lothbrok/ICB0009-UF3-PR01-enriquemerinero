@@ -4,123 +4,177 @@ using System.Net;
 using System.Text;
 using System.IO;
 using System.Threading;
-using VehiculoClass;
-using CarreteraClass;
 using NetworkStreamNS;
+using CarreteraClass;
+using VehiculoClass;
 
 namespace Client
 {
     class Program
     {
+        static bool escuchando = true;
+
         static void Main(string[] args)
         {
+            TcpClient cliente = new TcpClient();
+
             try
             {
-                Console.WriteLine("🚗 Cliente iniciando conexión...");
-
-                TcpClient cliente = new TcpClient("127.0.0.1", 5000);
-                Console.WriteLine("✅ Conectado al servidor.");
+                cliente.Connect("127.0.0.1", 13000);
+                Console.WriteLine("Conectado al servidor correctamente.");
 
                 NetworkStream stream = cliente.GetStream();
-                Console.WriteLine("📡 Stream de red obtenido en el cliente.");
 
-                // === HANDSHAKE ===
                 NetworkStreamClass.EscribirMensajeNetworkStream(stream, "INICIO");
-                Console.WriteLine("📤 Mensaje 'INICIO' enviado al servidor.");
+                Console.WriteLine("Mensaje 'INICIO' enviado al servidor.");
 
-                string idRecibido = NetworkStreamClass.LeerMensajeNetworkStream(stream);
-                Console.WriteLine($"📨 ID recibido del servidor: {idRecibido}");
+                string respuestaServidor = NetworkStreamClass.LeerMensajeNetworkStream(stream);
+                int id = int.Parse(respuestaServidor);
+                Console.WriteLine($"ID recibido desde el servidor: {id}");
 
-                NetworkStreamClass.EscribirMensajeNetworkStream(stream, idRecibido);
-                Console.WriteLine("📤 Confirmación enviada al servidor.");
+                NetworkStreamClass.EscribirMensajeNetworkStream(stream, id.ToString());
+                Console.WriteLine("ID confirmado al servidor.");
 
-                // === Crear vehículo ===
-                int id = int.Parse(idRecibido);
-                Random rnd = new Random();
-                Vehiculo nuevoVehiculo = new Vehiculo
+                string direccion = new Random().Next(2) == 0 ? "Norte" : "Sur";
+
+                Vehiculo v = new Vehiculo();
+                v.Id = id;
+                v.Direccion = direccion;
+                v.Pos = v.Direccion == "Norte" ? 0 : 100;
+
+                Console.WriteLine($"→ Dirección asignada: {v.Direccion}");
+                Console.WriteLine($"→ Velocidad del vehículo: {v.Velocidad} ms entre cada paso.");
+
+                Carretera carreteraAnterior = null;
+
+                Thread hiloEscuchaCarretera = new Thread(() =>
                 {
-                    Id = id,
-                    Pos = 0,
-                    Velocidad = rnd.Next(100, 501),
-                    Acabado = false,
-                    Direccion = "", // Se recibirá del servidor
-                    Parado = false
-                };
-
-                NetworkStreamClass.EscribirDatosVehiculoNS(stream, nuevoVehiculo);
-                Console.WriteLine($"🚗 Vehículo enviado al servidor → ID: {nuevoVehiculo.Id}, Velocidad: {nuevoVehiculo.Velocidad}ms");
-
-                // === Recibir el vehículo con dirección ===
-                nuevoVehiculo = NetworkStreamClass.LeerDatosVehiculoNS(stream);
-                Console.WriteLine($"📩 Dirección asignada: {nuevoVehiculo.Direccion}");
-
-                // === Hilo de escucha de carretera ===
-                Thread hiloEscucha = new Thread(() =>
-                {
-                    try
+                    while (escuchando)
                     {
-                        while (true)
+                        try
                         {
                             Carretera carreteraRecibida = NetworkStreamClass.LeerDatosCarreteraNS(stream);
-                            Console.WriteLine("📡 Estado actual de la carretera recibido del servidor:");
 
-                            foreach (Vehiculo v in carreteraRecibida.VehiculosEnCarretera)
+                            bool cambio = false;
+                            if (carreteraAnterior == null || carreteraRecibida.VehiculosEnCarretera.Count != carreteraAnterior.VehiculosEnCarretera.Count)
                             {
-                                string estado = v.Acabado ? "✅ Acabado" : $"📍 Pos: {v.Pos}";
-                                Console.WriteLine($"🚗 Vehículo #{v.Id} ({v.Direccion}) → {estado}");
+                                cambio = true;
+                            }
+                            else
+                            {
+                                for (int i = 0; i < carreteraRecibida.VehiculosEnCarretera.Count; i++)
+                                {
+                                    if (carreteraAnterior.VehiculosEnCarretera[i].Id != carreteraRecibida.VehiculosEnCarretera[i].Id ||
+                                        carreteraAnterior.VehiculosEnCarretera[i].Pos != carreteraRecibida.VehiculosEnCarretera[i].Pos)
+                                    {
+                                        cambio = true;
+                                        break;
+                                    }
+                                }
                             }
 
-                            Console.WriteLine();
+                            if (cambio)
+                            {
+                                Console.WriteLine("[Actualización desde servidor] Vehículos en carretera:");
+                                foreach (Vehiculo veh in carreteraRecibida.VehiculosEnCarretera)
+                                {
+                                    Console.WriteLine($"  → ID: {veh.Id} | Dirección: {veh.Direccion} | Posición: {veh.Pos} km");
+                                }
+                            }
+
+                            carreteraAnterior = carreteraRecibida;
                         }
-                    }
-                    catch (ThreadInterruptedException)
-                    {
-                        Console.WriteLine("ℹ️ Hilo de recepción interrumpido correctamente.");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"⚠️ Error al recibir datos del servidor: {ex.Message}");
+                        catch
+                        {
+                            break;
+                        }
                     }
                 });
 
-                hiloEscucha.Start();
+                hiloEscuchaCarretera.Start();
 
-                // === Movimiento del vehículo según dirección ===
-                if (nuevoVehiculo.Direccion == "Norte")
+                while (!v.Acabado)
                 {
-                    for (int i = 1; i <= 100; i++)
+                    if ((v.Direccion == "Norte" && v.Pos == 30) || (v.Direccion == "Sur" && v.Pos == 50))
                     {
-                        Thread.Sleep(nuevoVehiculo.Velocidad);
-                        nuevoVehiculo.Pos = i;
-                        if (i == 100) nuevoVehiculo.Acabado = true;
+                        Console.WriteLine($"→ Intentando entrar al puente...");
 
-                        Console.WriteLine($"🏁 Enviado → ID: {nuevoVehiculo.Id}, Posición: {nuevoVehiculo.Pos}, Velocidad: {nuevoVehiculo.Velocidad}ms");
-                        NetworkStreamClass.EscribirDatosVehiculoNS(stream, nuevoVehiculo);
+                        bool puedeCruzar = false;
+
+                        while (!puedeCruzar)
+                        {
+                            NetworkStreamClass.EscribirDatosVehiculoNS(stream, v);
+
+                            Thread.Sleep(500);
+
+                            if (carreteraAnterior != null)
+                            {
+                                Vehiculo yo = carreteraAnterior.VehiculosEnCarretera.Find(veh => veh.Id == v.Id);
+
+                                if (yo != null)
+                                {
+                                    v.Pos = yo.Pos;
+                                    if ((yo.Direccion == "Norte" && yo.Pos >= 30 && yo.Pos <= 50) ||
+                                        (yo.Direccion == "Sur" && yo.Pos >= 30 && yo.Pos <= 50))
+                                    {
+                                        puedeCruzar = true;
+                                        Console.WriteLine("→ Acceso permitido: cruzando el puente.");
+
+                                        // 🔥 AVANZAMOS para salir de la entrada y evitar repetir "Intentando entrar..."
+                                        if (v.Direccion == "Norte")
+                                        {
+                                            v.Pos += 1;
+                                        }
+                                        else
+                                        {
+                                            v.Pos -= 1;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        NetworkStreamClass.EscribirDatosVehiculoNS(stream, v);
+
+                        if (!v.Acabado)
+                        {
+                            if (v.Direccion == "Norte")
+                            {
+                                v.Pos += 1;
+                                if (v.Pos >= 100)
+                                {
+                                    v.Pos = 100;
+                                    v.Acabado = true;
+                                }
+                            }
+                            else
+                            {
+                                v.Pos -= 1;
+                                if (v.Pos <= 0)
+                                {
+                                    v.Pos = 0;
+                                    v.Acabado = true;
+                                }
+                            }
+                        }
+
+                        Thread.Sleep(v.Velocidad);
                     }
                 }
-                else // Sur
-                {
-                    for (int i = 100; i >= 0; i--)
-                    {
-                        Thread.Sleep(nuevoVehiculo.Velocidad);
-                        nuevoVehiculo.Pos = i;
-                        if (i == 0) nuevoVehiculo.Acabado = true;
 
-                        Console.WriteLine($"🏁 Enviado → ID: {nuevoVehiculo.Id}, Posición: {nuevoVehiculo.Pos}, Velocidad: {nuevoVehiculo.Velocidad}ms");
-                        NetworkStreamClass.EscribirDatosVehiculoNS(stream, nuevoVehiculo);
-                    }
-                }
-
-                // === Avisar fin y cerrar conexión ===
-                NetworkStreamClass.EscribirMensajeNetworkStream(stream, "FIN");
-                hiloEscucha.Interrupt();
-                cliente.Close();
-                Console.WriteLine("🔌 Conexión cerrada.");
+                escuchando = false;
+                Console.WriteLine("✓ Vehículo ha llegado a destino. Fin de la simulación.");
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                Console.WriteLine($"❌ Error de conexión: {ex.Message}");
+                Console.WriteLine("Error: " + e.Message);
             }
+
+            Console.WriteLine("Pulsa ENTER para cerrar el cliente.");
+            Console.ReadLine();
+            cliente.Close();
         }
     }
 }

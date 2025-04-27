@@ -16,7 +16,7 @@ public class Vehiculo
     {
         var randVelocidad = new Random();
 
-        this.Velocidad = randVelocidad.Next(100, 500);
+        this.Velocidad = randVelocidad.Next(200, 500);
         this.Pos = 0;
         this.Acabado = false;
         this.Parado = false;

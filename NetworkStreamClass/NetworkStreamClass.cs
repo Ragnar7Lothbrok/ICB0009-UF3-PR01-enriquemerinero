@@ -1,7 +1,7 @@
 ﻿using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
-using System.IO;
 using VehiculoClass;
 using CarreteraClass;
 
@@ -9,69 +9,75 @@ namespace NetworkStreamNS
 {
     public class NetworkStreamClass
     {
-        // Enviar un objeto Carretera por el stream
+        // Enviar un objeto Carretera por el stream (con prefijo de longitud)
         public static void EscribirDatosCarreteraNS(NetworkStream NS, Carretera C)
         {
             byte[] datos = C.CarreteraABytes();
+            byte[] longitud = BitConverter.GetBytes(datos.Length);
+            NS.Write(longitud, 0, longitud.Length);
             NS.Write(datos, 0, datos.Length);
         }
 
-        // Leer un objeto Carretera desde el stream
+        // Leer un objeto Carretera desde el stream (leyendo primero la longitud)
         public static Carretera LeerDatosCarreteraNS(NetworkStream NS)
         {
-            byte[] buffer = new byte[4096];
-            int bytesLeidos = NS.Read(buffer, 0, buffer.Length);
+            byte[] bufferLongitud = new byte[4];
+            NS.Read(bufferLongitud, 0, 4);
+            int longitudDatos = BitConverter.ToInt32(bufferLongitud, 0);
 
-            byte[] datosLeidos = new byte[bytesLeidos];
-            Array.Copy(buffer, datosLeidos, bytesLeidos);
+            byte[] bufferDatos = new byte[longitudDatos];
+            int totalLeidos = 0;
 
-            return Carretera.BytesACarretera(datosLeidos);
+            while (totalLeidos < longitudDatos)
+            {
+                int leidos = NS.Read(bufferDatos, totalLeidos, longitudDatos - totalLeidos);
+                totalLeidos += leidos;
+            }
+
+            return Carretera.BytesACarretera(bufferDatos);
         }
 
-        // Enviar un objeto Vehiculo por el stream
+        // Enviar un objeto Vehiculo (más sencillo porque es pequeño)
         public static void EscribirDatosVehiculoNS(NetworkStream NS, Vehiculo V)
         {
             byte[] datos = V.VehiculoaBytes();
+            byte[] longitud = BitConverter.GetBytes(datos.Length);
+            NS.Write(longitud, 0, longitud.Length);
             NS.Write(datos, 0, datos.Length);
         }
 
-        // Leer un objeto Vehiculo desde el stream
+        // Leer un objeto Vehiculo
         public static Vehiculo LeerDatosVehiculoNS(NetworkStream NS)
         {
-            byte[] buffer = new byte[1024];
-            int bytesLeidos = NS.Read(buffer, 0, buffer.Length);
+            byte[] bufferLongitud = new byte[4];
+            NS.Read(bufferLongitud, 0, 4);
+            int longitudDatos = BitConverter.ToInt32(bufferLongitud, 0);
 
-            byte[] datosLeidos = new byte[bytesLeidos];
-            Array.Copy(buffer, datosLeidos, bytesLeidos);
+            byte[] bufferDatos = new byte[longitudDatos];
+            int totalLeidos = 0;
 
-            return Vehiculo.BytesAVehiculo(datosLeidos);
+            while (totalLeidos < longitudDatos)
+            {
+                int leidos = NS.Read(bufferDatos, totalLeidos, longitudDatos - totalLeidos);
+                totalLeidos += leidos;
+            }
+
+            return Vehiculo.BytesAVehiculo(bufferDatos);
         }
 
-        // Leer un mensaje string desde el stream
+        // Leer un mensaje string
         public static string LeerMensajeNetworkStream(NetworkStream NS)
         {
             byte[] bufferLectura = new byte[1024];
-            int bytesLeidos = 0;
-            var tmpStream = new MemoryStream();
-            byte[] bytesTotales;
-
-            do
-            {
-                int bytesLectura = NS.Read(bufferLectura, 0, bufferLectura.Length);
-                tmpStream.Write(bufferLectura, 0, bytesLectura);
-                bytesLeidos += bytesLectura;
-            } while (NS.DataAvailable);
-
-            bytesTotales = tmpStream.ToArray();
-
-            return Encoding.Unicode.GetString(bytesTotales, 0, bytesLeidos);
+            int bytesLeidos = NS.Read(bufferLectura, 0, bufferLectura.Length);
+            return Encoding.Unicode.GetString(bufferLectura, 0, bytesLeidos);
         }
 
-        // Enviar un mensaje string al stream
-        public static void EscribirMensajeNetworkStream(NetworkStream NS, string Str)
+        // Enviar un mensaje string
+        public static void EscribirMensajeNetworkStream(NetworkStream NS, string mensaje)
         {
-            byte[] MensajeBytes = Encoding.Unicode.GetBytes(Str);
-            NS.Write(MensajeBytes, 0, MensajeBytes.Length);
+            byte[] mensajeBytes = Encoding.Unicode.GetBytes(mensaje);
+            NS.Write(mensajeBytes, 0, mensajeBytes.Length);
         }
     }
 }
