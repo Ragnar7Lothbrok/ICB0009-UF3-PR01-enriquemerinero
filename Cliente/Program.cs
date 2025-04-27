@@ -47,6 +47,7 @@ namespace Client
 
                 Carretera carreteraAnterior = null;
 
+                // 🔥 HILO DE ESCUCHA DE CARRETERA
                 Thread hiloEscuchaCarretera = new Thread(() =>
                 {
                     while (escuchando)
@@ -86,16 +87,18 @@ namespace Client
                         }
                         catch
                         {
-                            break;
+                            break; // Si el servidor cierra, salimos del hilo
                         }
                     }
                 });
 
                 hiloEscuchaCarretera.Start();
 
+                // 🔥 HILO PRINCIPAL: MOVIMIENTO DEL VEHÍCULO
                 while (!v.Acabado)
                 {
-                    if ((v.Direccion == "Norte" && v.Pos == 30) || (v.Direccion == "Sur" && v.Pos == 50))
+                    if ((v.Direccion == "Norte" && v.Pos >= 30 && v.Pos <= 50) || 
+                        (v.Direccion == "Sur" && v.Pos >= 30 && v.Pos <= 50))
                     {
                         Console.WriteLine($"→ Intentando entrar al puente...");
 
@@ -104,7 +107,6 @@ namespace Client
                         while (!puedeCruzar)
                         {
                             NetworkStreamClass.EscribirDatosVehiculoNS(stream, v);
-
                             Thread.Sleep(500);
 
                             if (carreteraAnterior != null)
@@ -114,13 +116,21 @@ namespace Client
                                 if (yo != null)
                                 {
                                     v.Pos = yo.Pos;
-                                    if ((yo.Direccion == "Norte" && yo.Pos >= 30 && yo.Pos <= 50) ||
-                                        (yo.Direccion == "Sur" && yo.Pos >= 30 && yo.Pos <= 50))
+
+                                    // 🔥 NUEVO: Salir del bucle si ya he salido del puente
+                                    if (!(v.Pos >= 30 && v.Pos <= 50))
+                                    {
+                                        puedeCruzar = true;
+                                        break;
+                                    }
+
+                                    if ((v.Direccion == "Norte" && v.Pos >= 30 && v.Pos <= 50) ||
+                                        (v.Direccion == "Sur" && v.Pos >= 30 && v.Pos <= 50))
                                     {
                                         puedeCruzar = true;
                                         Console.WriteLine("→ Acceso permitido: cruzando el puente.");
 
-                                        // 🔥 AVANZAMOS para salir de la entrada y evitar repetir "Intentando entrar..."
+                                        // 🔥 Avanzar para salir del punto de entrada
                                         if (v.Direccion == "Norte")
                                         {
                                             v.Pos += 1;
@@ -136,6 +146,7 @@ namespace Client
                     }
                     else
                     {
+                        // No estamos en el puente: movemos normal
                         NetworkStreamClass.EscribirDatosVehiculoNS(stream, v);
 
                         if (!v.Acabado)
@@ -149,7 +160,7 @@ namespace Client
                                     v.Acabado = true;
                                 }
                             }
-                            else
+                            else // Sur
                             {
                                 v.Pos -= 1;
                                 if (v.Pos <= 0)
@@ -164,7 +175,7 @@ namespace Client
                     }
                 }
 
-                escuchando = false;
+                escuchando = false; // 🔥 Parar el hilo de escucha
                 Console.WriteLine("✓ Vehículo ha llegado a destino. Fin de la simulación.");
             }
             catch (Exception e)
