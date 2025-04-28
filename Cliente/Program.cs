@@ -16,24 +16,27 @@ namespace Client
 
         static void Main(string[] args)
         {
+            Console.WriteLine("🚗 Cliente iniciando conexión...");
+
             TcpClient cliente = new TcpClient();
 
             try
             {
                 cliente.Connect("127.0.0.1", 13000);
-                Console.WriteLine("Conectado al servidor correctamente.");
+                Console.WriteLine("✅ Conectado al servidor.");
 
                 NetworkStream stream = cliente.GetStream();
+                Console.WriteLine("🔧 Stream de red obtenido en el cliente.");
 
                 NetworkStreamClass.EscribirMensajeNetworkStream(stream, "INICIO");
-                Console.WriteLine("Mensaje 'INICIO' enviado al servidor.");
+                Console.WriteLine("📤 Mensaje 'INICIO' enviado al servidor.");
 
                 string respuestaServidor = NetworkStreamClass.LeerMensajeNetworkStream(stream);
                 int id = int.Parse(respuestaServidor);
-                Console.WriteLine($"ID recibido desde el servidor: {id}");
+                Console.WriteLine($"📥 ID recibido del servidor: {id}");
 
                 NetworkStreamClass.EscribirMensajeNetworkStream(stream, id.ToString());
-                Console.WriteLine("ID confirmado al servidor.");
+                Console.WriteLine("✅ Confirmación enviada al servidor.");
 
                 string direccion = new Random().Next(2) == 0 ? "Norte" : "Sur";
 
@@ -42,8 +45,7 @@ namespace Client
                 v.Direccion = direccion;
                 v.Pos = v.Direccion == "Norte" ? 0 : 100;
 
-                Console.WriteLine($"→ Dirección asignada: {v.Direccion}");
-                Console.WriteLine($"→ Velocidad del vehículo: {v.Velocidad} ms entre cada paso.");
+                Console.WriteLine($"🚘 Vehículo preparado ➔ ID: {v.Id}, Dirección: {v.Direccion}, Velocidad: {v.Velocidad}ms");
 
                 Carretera carreteraAnterior = null;
 
@@ -76,10 +78,10 @@ namespace Client
 
                             if (cambio)
                             {
-                                Console.WriteLine("[Actualización desde servidor] Vehículos en carretera:");
+                                Console.WriteLine("\n🌍 [Actualización] Vehículos en carretera:");
                                 foreach (Vehiculo veh in carreteraRecibida.VehiculosEnCarretera)
                                 {
-                                    Console.WriteLine($"  → ID: {veh.Id} | Dirección: {veh.Direccion} | Posición: {veh.Pos} km");
+                                    Console.WriteLine($"  ➔ ID: {veh.Id} | Dirección: {veh.Direccion} | Posición: {veh.Pos} km");
                                 }
                             }
 
@@ -87,7 +89,7 @@ namespace Client
                         }
                         catch
                         {
-                            break; // Si el servidor cierra, salimos del hilo
+                            break; // Fin de la escucha si el servidor cierra
                         }
                     }
                 });
@@ -100,7 +102,7 @@ namespace Client
                     if ((v.Direccion == "Norte" && v.Pos >= 30 && v.Pos <= 50) || 
                         (v.Direccion == "Sur" && v.Pos >= 30 && v.Pos <= 50))
                     {
-                        Console.WriteLine($"→ Intentando entrar al puente...");
+                        Console.WriteLine($"🛑 Intentando entrar al puente...");
 
                         bool puedeCruzar = false;
 
@@ -117,7 +119,6 @@ namespace Client
                                 {
                                     v.Pos = yo.Pos;
 
-                                    // 🔥 NUEVO: Salir del bucle si ya he salido del puente
                                     if (!(v.Pos >= 30 && v.Pos <= 50))
                                     {
                                         puedeCruzar = true;
@@ -128,9 +129,8 @@ namespace Client
                                         (v.Direccion == "Sur" && v.Pos >= 30 && v.Pos <= 50))
                                     {
                                         puedeCruzar = true;
-                                        Console.WriteLine("→ Acceso permitido: cruzando el puente.");
+                                        Console.WriteLine("✅ Acceso permitido: cruzando el puente.");
 
-                                        // 🔥 Avanzar para salir del punto de entrada
                                         if (v.Direccion == "Norte")
                                         {
                                             v.Pos += 1;
@@ -146,7 +146,6 @@ namespace Client
                     }
                     else
                     {
-                        // No estamos en el puente: movemos normal
                         NetworkStreamClass.EscribirDatosVehiculoNS(stream, v);
 
                         if (!v.Acabado)
@@ -158,15 +157,17 @@ namespace Client
                                 {
                                     v.Pos = 100;
                                     v.Acabado = true;
+                                    NetworkStreamClass.EscribirDatosVehiculoNS(stream, v);
                                 }
                             }
-                            else // Sur
+                            else
                             {
                                 v.Pos -= 1;
                                 if (v.Pos <= 0)
                                 {
                                     v.Pos = 0;
                                     v.Acabado = true;
+                                    NetworkStreamClass.EscribirDatosVehiculoNS(stream, v);
                                 }
                             }
                         }
@@ -175,15 +176,15 @@ namespace Client
                     }
                 }
 
-                escuchando = false; // 🔥 Parar el hilo de escucha
-                Console.WriteLine("✓ Vehículo ha llegado a destino. Fin de la simulación.");
+                escuchando = false;
+                Console.WriteLine("\n🏁 Vehículo ha llegado a destino. ¡Fin de la simulación!");
             }
             catch (Exception e)
             {
-                Console.WriteLine("Error: " + e.Message);
+                Console.WriteLine($"❌ Error: {e.Message}");
             }
 
-            Console.WriteLine("Pulsa ENTER para cerrar el cliente.");
+            Console.WriteLine("\nPulsa ENTER para cerrar el cliente...");
             Console.ReadLine();
             cliente.Close();
         }

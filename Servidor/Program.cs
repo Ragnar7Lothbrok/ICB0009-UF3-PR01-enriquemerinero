@@ -31,7 +31,7 @@ namespace Servidor
         static Carretera carreteraGlobal = new Carretera();
         static Vehiculo? vehiculoEnPuente = null;
 
-        static Carretera carreteraAnterior = null; // 🔥 Nueva variable para guardar la última carretera impresa
+        static Carretera carreteraAnterior = null;
 
         static readonly object lockId = new object();
         static readonly object lockLista = new object();
@@ -43,12 +43,13 @@ namespace Servidor
             int puerto = 13000;
             TcpListener servidor = new TcpListener(IPAddress.Any, puerto);
             servidor.Start();
-            Console.WriteLine("Servidor iniciado. Esperando conexiones de clientes...");
+            Console.WriteLine("🚀 Servidor iniciado...");
+            Console.WriteLine($"📡 Esperando conexiones en el puerto {puerto}...\n");
 
             while (true)
             {
                 TcpClient clienteConectado = servidor.AcceptTcpClient();
-                Console.WriteLine("Cliente conectado.");
+                Console.WriteLine("✅ Cliente conectado.");
 
                 Thread hiloCliente = new Thread(() => GestionarCliente(clienteConectado));
                 hiloCliente.Start();
@@ -69,12 +70,12 @@ namespace Servidor
                     }
                     catch (IOException)
                     {
-                        Console.WriteLine($"[Servidor] Error al enviar carretera al cliente con ID: {cliente.Id}. Lo marcaré como desconectado.");
+                        Console.WriteLine($"⚠️ [Servidor] Error al enviar carretera al cliente con ID: {cliente.Id}. Lo marcaré como desconectado.");
                         clientesDesconectados.Add(cliente);
                     }
                     catch (ObjectDisposedException)
                     {
-                        Console.WriteLine($"[Servidor] El stream del cliente {cliente.Id} ya estaba cerrado. Eliminando.");
+                        Console.WriteLine($"⚠️ [Servidor] El stream del cliente {cliente.Id} ya estaba cerrado. Eliminando.");
                         clientesDesconectados.Add(cliente);
                     }
                 }
@@ -86,7 +87,7 @@ namespace Servidor
 
                 if (clientesDesconectados.Count > 0)
                 {
-                    Console.WriteLine($"[Servidor] {clientesDesconectados.Count} cliente(s) eliminado(s) de la lista.");
+                    Console.WriteLine($"🗑️ [Servidor] {clientesDesconectados.Count} cliente(s) eliminado(s) de la lista.");
                 }
             }
         }
@@ -94,17 +95,17 @@ namespace Servidor
         static void GestionarCliente(TcpClient cliente)
         {
             NetworkStream stream = cliente.GetStream();
-            Console.WriteLine($"[Hilo {Thread.CurrentThread.ManagedThreadId}] NetworkStream obtenido correctamente.");
+            Console.WriteLine($"🔧 Stream de red obtenido para vehículo {Thread.CurrentThread.ManagedThreadId}");
 
             string mensajeInicio = NetworkStreamClass.LeerMensajeNetworkStream(stream);
+            Console.WriteLine($"📩 Mensaje recibido del cliente: {mensajeInicio}");
+
             if (mensajeInicio != "INICIO")
             {
-                Console.WriteLine($"[Hilo {Thread.CurrentThread.ManagedThreadId}] Error: no se recibió 'INICIO'.");
+                Console.WriteLine($"❌ [Hilo {Thread.CurrentThread.ManagedThreadId}] Error: no se recibió 'INICIO'.");
                 cliente.Close();
                 return;
             }
-
-            Console.WriteLine($"[Hilo {Thread.CurrentThread.ManagedThreadId}] Mensaje 'INICIO' recibido correctamente.");
 
             int idAsignado;
             string direccion;
@@ -116,27 +117,41 @@ namespace Servidor
 
             direccion = new Random().Next(2) == 0 ? "Norte" : "Sur";
 
-            Console.WriteLine($"[Hilo {Thread.CurrentThread.ManagedThreadId}] ID asignado: {idAsignado} - Dirección: {direccion}");
+            Console.WriteLine($"🔢 ID asignado: {idAsignado}, Dirección: {direccion}");
 
             lock (lockLista)
             {
                 listaClientes.Add(new ClienteConectado(idAsignado, stream));
-                Console.WriteLine($"[Hilo {Thread.CurrentThread.ManagedThreadId}] Cliente añadido a la lista. Total conectados: {listaClientes.Count}");
+                Console.WriteLine($"👥 Cliente añadido a la lista. Total conectados: {listaClientes.Count}");
             }
 
             NetworkStreamClass.EscribirMensajeNetworkStream(stream, idAsignado.ToString());
-            Console.WriteLine($"[Hilo {Thread.CurrentThread.ManagedThreadId}] ID enviado al cliente.");
+            Console.WriteLine($"📤 ID enviado al cliente: {idAsignado}");
 
             string confirmacion = NetworkStreamClass.LeerMensajeNetworkStream(stream);
             if (confirmacion == idAsignado.ToString())
             {
-                Console.WriteLine($"[Hilo {Thread.CurrentThread.ManagedThreadId}] Confirmación recibida del cliente con ID: {confirmacion}");
+                Console.WriteLine($"✅ Confirmación de ID recibida: {confirmacion}");
+                Console.WriteLine($"🤝 Handshake completado correctamente para cliente #{idAsignado}\n");
             }
             else
             {
-                Console.WriteLine($"[Hilo {Thread.CurrentThread.ManagedThreadId}] Error: el cliente ha confirmado un ID incorrecto.");
+                Console.WriteLine($"❌ [Hilo {Thread.CurrentThread.ManagedThreadId}] Error: el cliente ha confirmado un ID incorrecto.");
                 cliente.Close();
                 return;
+            }
+
+            lock (lockCarretera)
+            {
+                var nuevoVehiculo = new Vehiculo
+                {
+                    Id = idAsignado,
+                    Direccion = direccion,
+                    Pos = (direccion == "Norte") ? 0 : 100
+                };
+                carreteraGlobal.AñadirVehiculo(nuevoVehiculo);
+
+                Console.WriteLine($"🚗 Vehículo añadido a la carretera ➔ ID: {nuevoVehiculo.Id}, Dirección: {nuevoVehiculo.Direccion}, Posición: {nuevoVehiculo.Pos} km");
             }
 
             while (true)
@@ -153,11 +168,11 @@ namespace Servidor
                             if (vehiculoEnPuente == null)
                             {
                                 vehiculoEnPuente = vehiculoRecibido;
-                                Console.WriteLine($"[Servidor] Vehículo {vehiculoRecibido.Id} está cruzando el puente.");
+                                Console.WriteLine($"🌉 Vehículo {vehiculoRecibido.Id} está cruzando el puente.");
                             }
                             else if (vehiculoEnPuente.Id != vehiculoRecibido.Id)
                             {
-                                Console.WriteLine($"[Servidor] Vehículo {vehiculoRecibido.Id} esperando: puente ocupado por {vehiculoEnPuente.Id}.");
+                                Console.WriteLine($"⛔ Vehículo {vehiculoRecibido.Id} esperando: puente ocupado por {vehiculoEnPuente.Id}.");
                                 continue;
                             }
                         }
@@ -168,7 +183,7 @@ namespace Servidor
                             if (vehiculoEnPuente != null && vehiculoEnPuente.Id == vehiculoRecibido.Id)
                             {
                                 vehiculoEnPuente = null;
-                                Console.WriteLine($"[Servidor] Vehículo {vehiculoRecibido.Id} ha salido del puente.");
+                                Console.WriteLine($"✅ Vehículo {vehiculoRecibido.Id} ha salido del puente.");
                             }
                         }
                     }
@@ -177,7 +192,6 @@ namespace Servidor
                     {
                         carreteraGlobal.ActualizarVehiculo(vehiculoRecibido);
 
-                        // 🔥 Solo mostramos si hay cambio en la carretera
                         bool cambio = false;
                         if (carreteraAnterior == null || carreteraAnterior.VehiculosEnCarretera.Count != carreteraGlobal.VehiculosEnCarretera.Count)
                         {
@@ -221,13 +235,13 @@ namespace Servidor
                     if ((vehiculoRecibido.Direccion == "Norte" && vehiculoRecibido.Pos >= 100) ||
                         (vehiculoRecibido.Direccion == "Sur" && vehiculoRecibido.Pos <= 0))
                     {
-                        Console.WriteLine($"[Hilo {Thread.CurrentThread.ManagedThreadId}] El vehículo {vehiculoRecibido.Id} ha llegado a destino.");
+                        Console.WriteLine($"🏁 [Hilo {Thread.CurrentThread.ManagedThreadId}] Vehículo {vehiculoRecibido.Id} ha llegado a destino.");
                         break;
                     }
                 }
                 catch (IOException)
                 {
-                    Console.WriteLine($"[Hilo {Thread.CurrentThread.ManagedThreadId}] Error: el cliente se ha desconectado inesperadamente.");
+                    Console.WriteLine($"❌ [Hilo {Thread.CurrentThread.ManagedThreadId}] Error: el cliente se ha desconectado inesperadamente.");
                     break;
                 }
             }
