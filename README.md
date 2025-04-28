@@ -217,15 +217,127 @@ En esta segunda fase se implementa la simulación del movimiento de los vehícul
 
 # 🧠 Preguntas del Ejercicio 3:
 
-✏️ **Pregunta 1:** ¿En qué parte del sistema hemos decidido implementar el control de acceso al puente? ¿Por qué?
+### ✏️ Pregunta 1: Explica las ventajas e inconvenientes de programar el control de paso por el túnel, en el cliente o en el servidor.
 
-✏️ **Pregunta 2:** ¿Qué problemas o situaciones podría provocar que no controlásemos el acceso al puente correctamente?
+#### Respuesta:
+
+**Se puede programar el control en el cliente o en el servidor. A continuación se detallan ventajas e inconvenientes de ambas opciones:**
+
+---
+
+#### 🖥️ Control en el Servidor
+
+**Ventajas:**
+- ✅ **Consistencia global:** Todos los clientes siguen las mismas reglas, ya que el servidor centraliza el control.
+- ✅ **Mayor seguridad:** Los clientes no pueden "hacer trampas" ni saltarse las normas.
+- ✅ **Facilidad de mantenimiento:** Cualquier cambio en la lógica se hace solo en el servidor, no en todos los clientes.
+- ✅ **Gestión de errores:** Si un cliente se desconecta de forma inesperada, el servidor puede liberar automáticamente el puente.
+
+**Inconvenientes:**
+- ⚠️ **Mayor carga de procesamiento:** El servidor tiene que gestionar más lógica y puede saturarse si hay muchos vehículos.
+- ⚠️ **Ligero aumento del tráfico de red:** Cada vez que un vehículo quiere cruzar, necesita comunicarse con el servidor.
+
+---
+
+#### 📱 Control en el Cliente
+
+**Ventajas:**
+- ✅ **Distribución de la carga:** Los clientes se encargan de gestionar sus propios movimientos, aligerando el trabajo del servidor.
+- ✅ **Respuesta más rápida localmente:** El cliente decide sin necesidad de esperar la respuesta del servidor.
+
+**Inconvenientes:**
+- ⚠️ **Inconsistencias:** Sin un control central, podrían ocurrir errores donde dos vehículos cruzan al mismo tiempo.
+- ⚠️ **Mayor complejidad en el cliente:** Cada cliente tendría que implementar la lógica completa de cruce y sincronización con otros clientes.
+- ⚠️ **Mayor riesgo de trampas o errores:** Un cliente mal programado (o modificado) podría ignorar las reglas y generar conflictos.
+
+---
+
+#### 🏁 Conclusión:
+
+👉 **Se ha decidido implementar el control de paso en el servidor.**  
+De esta manera garantizamos **un comportamiento consistente, seguro y sincronizado para todos los vehículos**, a costa de un pequeño aumento de trabajo en el servidor, que es perfectamente asumible en este tipo de simulación.
+
+---
+
+### ✏️ Pregunta 2: ¿Cómo gestionar colas de espera para cruzar el puente?
+
+#### Respuesta:
+
+Para gestionar correctamente las colas de vehículos que esperan para cruzar el puente, propongo el siguiente diseño:
+
+---
+
+#### 🛠️ ¿Qué estructura de datos usaría?
+
+- **Dos colas (`Queue`) separadas**, una para cada dirección:
+  - `colaNorte` → Vehículos que van de Sur a Norte.
+  - `colaSur` → Vehículos que van de Norte a Sur.
+
+Cada cola mantendría el orden de llegada de los vehículos que quieren cruzar, **respetando la prioridad de los que llegaron antes** (principio FIFO: "First In, First Out").
+
+---
+
+#### 🔄 ¿Cómo sería la lógica de gestión?
+
+- El servidor mantiene una **variable `vehiculoEnPuente`** para saber qué vehículo está cruzando en cada momento.
+- Cuando un vehículo llega al inicio del puente (km 30 o 50), el servidor:
+  - Si el puente está libre (`vehiculoEnPuente == null`):
+    - Deja pasar al primer vehículo en la cola de su dirección (si existe).
+    - Si no hay cola, pasa el vehículo que llegó al puente directamente.
+  - Si el puente está ocupado:
+    - Añade el vehículo a su cola correspondiente (`colaNorte` o `colaSur`).
+
+- Cuando un vehículo **sale** del puente:
+  - El servidor mira qué cola tiene vehículos esperando.
+  - Da prioridad primero a vehículos de la **misma dirección** que el último que cruzó (si existen).
+  - Si no hay vehículos en esa dirección, da paso a los vehículos en sentido contrario.
+
+---
+
+#### 📡 ¿Qué mostraría el cliente?
+
+- Si el servidor indica que el vehículo está esperando ➔ Mostraría en pantalla:
+  - `"Esperando (norte)"` o `"Esperando (sur)"`.
+- Si el servidor indica que puede cruzar ➔ Mostraría:
+  - `"Cruzando puente"`.
+
+De esta manera, los clientes siempre sabrán su estado actualizado en función de la respuesta que reciban del servidor.
+
+---
+
+#### 🧠 Justificación de la elección:
+
+- **Las colas (`Queue`)** son la mejor estructura porque:
+  - Son fáciles de usar y rápidas de gestionar.
+  - Respetan el orden de llegada de los vehículos.
+  - Permiten un control limpio y justo de quién debe cruzar primero.
+- Separarlas por dirección facilita que la gestión de prioridades sea simple y eficiente, evitando bloqueos innecesarios entre sentidos opuestos.
+
+---
+
+#### 🏁 Conclusión:
+
+👉 Usar **dos colas separadas** para norte y sur, gestionadas desde el servidor, es una solución segura, ordenada y fácil de mantener para garantizar el cruce correcto de los vehículos por el puente.
+
+---
+
+**Sin embargo, en mi proyecto he optado por hacerlo de una forma más sencilla:**
+Actualmente no utilizo colas separadas en el servidor.
+En su lugar, cada vehículo simplemente comprueba si el puente está libre en el momento de llegar:
+- Si está libre, cruza.
+- Si está ocupado, espera y reintenta.
+Esta aproximación es más simple, suficiente para garantizar el paso único de vehículos, y evita la complejidad de gestionar varias colas en memoria.
 
 ---
 
 # 📋 Observaciones finales
 - Proyecto desarrollado en C# utilizando .NET 8.0.
-- Totalmente funcional.
-- Interfaz de consola mejorada con emojis y mensajes claros.
-- Manejo correcto de desconexiones de clientes.
-- Comunicación fluida usando `NetworkStream` con prefijos de longitud y serialización XML.
+- Totalmente funcional y probado con múltiples clientes conectados simultáneamente.
+- Interfaz de consola mejorada con emojis y mensajes claros para facilitar la comprensión del estado del sistema.
+- Manejo correcto de desconexiones inesperadas de clientes.
+- Comunicación fluida usando `NetworkStream` con prefijos de longitud y serialización XML para objetos.
+- Implementación de hilos independientes para:
+  - Movimiento del vehículo (hilo principal).
+  - Recepción de actualizaciones de la carretera (hilo de escucha).
+- Control de tráfico en el puente implementado en el servidor, garantizando que **solo un vehículo cruce a la vez**.
+- Simulación de avance de vehículos respetando su dirección ("Norte" o "Sur") y gestionando correctamente su llegada al destino (`0 km` o `100 km`).
